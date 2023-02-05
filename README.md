@@ -1,2 +1,2 @@
 # drone
-Java assesment for Musala soft
+Java assessment for MusalaSoft

@@ -13,7 +13,4 @@ public abstract class DroneDto {
     private Model model;
     @JsonProperty("max_weight")
     private Double maxWeight;
-    @JsonProperty("battery_percentage")
-    private Double batteryPercentage;
-    private State state;
 }

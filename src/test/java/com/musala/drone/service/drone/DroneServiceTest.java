@@ -10,7 +10,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 
 import com.musala.drone.config.ModelMapperConfig;
+import com.musala.drone.exception.InvalidDroneException;
 import com.musala.drone.model.drone.Drone;
+import com.musala.drone.model.drone.DroneRequest;
 import com.musala.drone.model.drone.DroneResponse;
 import com.musala.drone.repository.drone.DroneRepository;
 
@@ -20,6 +22,10 @@ import static com.musala.drone.model.drone.Model.LIGHT;
 import static com.musala.drone.model.drone.Model.MIDDLE;
 import static com.musala.drone.model.drone.State.IDLE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.refEq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -102,5 +108,33 @@ class DroneServiceTest {
         assertEquals(LIGHT, droneResponse4.getModel());
         assertEquals(70.0, droneResponse4.getBatteryPercentage());
         assertEquals(IDLE, droneResponse4.getState());
+    }
+
+    @Test
+    public void test_register_withValidRequest_thenCreated() {
+        Drone expectedDrone = new Drone();
+        expectedDrone.setSerialNumber("serial_number");
+        expectedDrone.setModel(LIGHT);
+        expectedDrone.setState(IDLE);
+        expectedDrone.setMaxWeight(500.0);
+        expectedDrone.setBatteryPercentage(100.0);
+
+        Drone expectedDroneWithId = new Drone();
+        mapper.map(expectedDrone, expectedDroneWithId);
+        expectedDroneWithId.setId(1l);
+
+        lenient().when(droneRepository.save(refEq(expectedDrone))).thenReturn(expectedDroneWithId);
+        droneService.register(new DroneRequest("serial_number", 500.0, LIGHT));
+    }
+
+    @Test
+    public void test_register_withSerialNumberMoreThan100Chars_throwsInvalidDroneException() {
+        final String invalidSerialNumber = "serial_number_serial_number_serial_number_serial_" +
+                "number_serial_number_serial_number_serial_number_serial_number";
+        DroneRequest request = new DroneRequest(invalidSerialNumber, 500.0, LIGHT);
+        InvalidDroneException invalidDroneException = assertThrows(InvalidDroneException.class,
+                () -> droneService.register(request));
+        assertEquals(request, invalidDroneException.getDroneRequest());
+        assertTrue(invalidDroneException.getMessage().contains(invalidSerialNumber));
     }
 }

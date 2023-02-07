@@ -9,6 +9,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,7 @@ import com.musala.drone.model.medication.Medication;
 @Getter
 @Setter
 @Entity
+@ToString
 public class Drone extends BaseEntity {
     @Column(name = "serial_number")
     private String serialNumber;

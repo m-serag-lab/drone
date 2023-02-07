@@ -10,4 +10,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class DroneResponse extends DroneDto {
     @JsonProperty("id")
     private Long id;
+    @JsonProperty("battery_percentage")
+    private Double batteryPercentage;
+    private State state;
 }

@@ -21,6 +21,6 @@ create table drone_medication
 (
     drone_id      BIGINT,
     medication_id BIGINT,
-    FOREIGN KEY (drone_id) references drone (id),
-    FOREIGN KEY (medication_id) references medication (id)
+    FOREIGN KEY (drone_id) references drone (id) ON DELETE CASCADE,
+    FOREIGN KEY (medication_id) references medication (id) ON DELETE CASCADE
 );

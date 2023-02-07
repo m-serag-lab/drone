@@ -1,5 +1,8 @@
 package com.musala.drone.controller;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,9 +13,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import com.musala.drone.model.drone.Drone;
+import com.musala.drone.model.medication.Medication;
 import com.musala.drone.repository.drone.DroneRepository;
+import com.musala.drone.repository.medication.MedicationRepository;
 
 import static com.musala.drone.model.drone.State.IDLE;
+import static com.musala.drone.model.drone.State.LOADED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -27,6 +33,10 @@ public class DroneControllerIT {
     private MockMvc mvc;
     @Autowired
     private DroneRepository droneRepository;
+    @PersistenceContext
+    private EntityManager entityManager;
+    @Autowired
+    private MedicationRepository medicationRepository;
 
     @Test
     void test_listAll_thenValidateMapping() throws Exception {
@@ -60,7 +70,7 @@ public class DroneControllerIT {
 
             // When: register new drone
             MvcResult result = mvc.perform(post("/drones").contentType(MediaType.APPLICATION_JSON)
-                            .content(request.toString()))
+                            .content(request))
                     .andExpect(status().isCreated()).andReturn();
 
             // Then: validate saved drone
@@ -77,9 +87,64 @@ public class DroneControllerIT {
 
         } finally {
             // Cleanup
-            if (drone != null) {
-                droneRepository.delete(drone);
-            }
+            safeDelete(drone);
+        }
+    }
+
+    @Test
+    void test_loadMedications_withValidRequest_thenValidateDroneMedications() throws Exception {
+        Drone drone = null;
+        try {
+            // Given: drone, medication 1, medication 2 and request body
+            String serialNumber = "serial_number_value";
+            drone = new Drone();
+            drone.setSerialNumber(serialNumber);
+            drone.setState(IDLE);
+            drone.setBatteryPercentage(80.0);
+            drone.setMaxWeight(35.0);
+            droneRepository.save(drone);
+
+            Medication medication1 = new Medication();
+            medication1.setCode("CODE-1");
+            medication1.setWeight(10.0);
+            medicationRepository.save(medication1);
+
+            Medication medication2 = new Medication();
+            medication2.setCode("CODE-2");
+            medication2.setWeight(10.0);
+            medicationRepository.save(medication2);
+
+            String request = String.format("{\"medication_codes\": [\"%s\", \"%s\"]}",
+                    "CODE-1",
+                    "CODE-2");
+
+            // When: register new drone
+            String uri = "/drones/" + serialNumber + "/medications";
+            mvc.perform(post(uri).contentType(MediaType.APPLICATION_JSON)
+                            .content(request))
+                    .andExpect(status().isOk());
+
+            // Then: validate saved drone
+            String findDroneWithMedicationsJPQL = String.format("select e from Drone e" +
+                    " join fetch e.medications m" +
+                    " where e.serialNumber = '%s'", serialNumber);
+            drone = (Drone) entityManager.createQuery(findDroneWithMedicationsJPQL).getResultList().get(0);
+
+            assertEquals(serialNumber, drone.getSerialNumber());
+            assertEquals(LOADED, drone.getState());
+            assertNotNull(drone.getMedications());
+            assertEquals("CODE-1", drone.getMedications().get(0).getCode());
+            assertEquals("CODE-2", drone.getMedications().get(1).getCode());
+
+        } finally {
+            // Cleanup: delete medication and drone
+            safeDelete(drone);
+        }
+    }
+
+    private void safeDelete(Drone drone) {
+        if (drone != null) {
+            droneRepository.delete(drone);
         }
     }
 }

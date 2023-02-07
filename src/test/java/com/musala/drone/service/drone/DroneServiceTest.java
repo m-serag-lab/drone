@@ -1,6 +1,7 @@
 package com.musala.drone.service.drone;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,16 +12,23 @@ import org.modelmapper.ModelMapper;
 
 import com.musala.drone.config.ModelMapperConfig;
 import com.musala.drone.exception.InvalidDroneException;
+import com.musala.drone.exception.InvalidMedicationException;
+import com.musala.drone.exception.LoadedDroneException;
+import com.musala.drone.exception.LowBatteryException;
 import com.musala.drone.model.drone.Drone;
+import com.musala.drone.model.drone.DroneMedicationsRequest;
 import com.musala.drone.model.drone.DroneRequest;
 import com.musala.drone.model.drone.DroneResponse;
+import com.musala.drone.model.medication.Medication;
 import com.musala.drone.repository.drone.DroneRepository;
+import com.musala.drone.repository.medication.MedicationRepository;
 
 import static com.musala.drone.model.drone.Model.CRUISER;
 import static com.musala.drone.model.drone.Model.HEAVY;
 import static com.musala.drone.model.drone.Model.LIGHT;
 import static com.musala.drone.model.drone.Model.MIDDLE;
 import static com.musala.drone.model.drone.State.IDLE;
+import static com.musala.drone.model.drone.State.LOADED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,12 +41,15 @@ class DroneServiceTest {
 
     @Mock
     private DroneRepository droneRepository;
+    @Mock
+    private MedicationRepository medicationRepository;
+
     private ModelMapper mapper = new ModelMapperConfig().modelMapper();
     private DroneService droneService;
 
     @BeforeEach
     void setUp() {
-        droneService = new DroneService(droneRepository, mapper);
+        droneService = new DroneService(droneRepository, medicationRepository, mapper);
     }
 
     @Test
@@ -146,5 +157,70 @@ class DroneServiceTest {
                 () -> droneService.register(request));
         assertEquals(request, invalidDroneException.getDroneRequest());
         assertTrue(invalidDroneException.getMessage().contains(String.valueOf(invalidWeight)));
+    }
+
+    @Test
+    public void test_loadMedication_withLowBatteryDrone_throwsLowBatteryException() {
+        Drone lowBatteryDrone = new Drone();
+        String serialNumber = "serial_number";
+        lowBatteryDrone.setSerialNumber(serialNumber);
+        lowBatteryDrone.setBatteryPercentage(20.5);
+        when(droneRepository.findBySerialNumber(serialNumber)).thenReturn(Optional.of(lowBatteryDrone));
+        LowBatteryException lowBatteryException = assertThrows(LowBatteryException.class,
+                () -> droneService.loadMedications(serialNumber,
+                        new DroneMedicationsRequest()));
+        assertEquals(20.5, lowBatteryException.getBatteryPercentage());
+        assertEquals(serialNumber, lowBatteryException.getSerialNumber());
+    }
+
+    @Test
+    public void test_loadMedication_withLoadedDrone_throwsLoadedDroneException() {
+        Drone loadedDrone = new Drone();
+        String serialNumber = "serial_number";
+        loadedDrone.setSerialNumber(serialNumber);
+        loadedDrone.setState(LOADED);
+
+        when(droneRepository.findBySerialNumber(serialNumber)).thenReturn(Optional.of(loadedDrone));
+        LoadedDroneException loadedDroneException = assertThrows(LoadedDroneException.class,
+                () -> droneService.loadMedications(serialNumber,
+                        new DroneMedicationsRequest()));
+        assertEquals(serialNumber, loadedDroneException.getSerialNumber());
+    }
+
+    @Test
+    public void test_loadMedication_withInvalidMedicationCode_throwsInvalidDroneException() {
+        Medication medication1 = new Medication();
+        medication1.setId(1l);
+        medication1.setCode("CODE-1");
+        medication1.setName("NAME-1");
+        medication1.setWeight(10.0);
+        medication1.setImagePath("PATH-1");
+
+        List<String> medicationCodes = List.of("CODE-1", "CODE-2", "CODE-3");
+        when(medicationRepository.findAllByCodes(medicationCodes))
+                .thenReturn(List.of(medication1));
+
+
+        final DroneMedicationsRequest droneMedicationsRequest = new DroneMedicationsRequest();
+        droneMedicationsRequest.setMedicationCodes(medicationCodes);
+        String serialNumber = "serial_number";
+        Drone drone = new Drone();
+        drone.setState(IDLE);
+        drone.setBatteryPercentage(25.1);
+        when(droneRepository.findBySerialNumber(serialNumber)).thenReturn(Optional.of(drone));
+        InvalidMedicationException invalidMedicationException = assertThrows(InvalidMedicationException.class,
+                () -> droneService.loadMedications(serialNumber,
+                        droneMedicationsRequest));
+        assertEquals(List.of("CODE-2", "CODE-3"), invalidMedicationException.getNotFoundCodes());
+    }
+
+    @Test
+    public void test_loadMedication_withInvalidDroneSerialNumber_throwsInvalidDroneException() {
+        when(droneRepository.findBySerialNumber("serial_number")).thenReturn(Optional.empty());
+
+        InvalidDroneException invalidDroneException = assertThrows(InvalidDroneException.class,
+                () -> droneService.loadMedications("serial_number",
+                        new DroneMedicationsRequest()));
+        assertTrue(invalidDroneException.getMessage().contains("serial_number"));
     }
 }

@@ -13,4 +13,9 @@ public class InvalidDroneException extends RuntimeException {
         super(message);
         this.droneRequest = droneRequest;
     }
+
+    public InvalidDroneException(String serialNumber) {
+        super(String.format("serial_number: '%s' is not found", serialNumber));
+        droneRequest = null;
+    }
 }

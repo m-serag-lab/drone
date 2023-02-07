@@ -128,7 +128,7 @@ class DroneServiceTest {
     }
 
     @Test
-    public void test_register_withSerialNumberMoreThan100Chars_throwsInvalidDroneException() {
+    public void test_register_withInvalidSerialNumber_throwsInvalidDroneException() {
         final String invalidSerialNumber = "serial_number_serial_number_serial_number_serial_" +
                 "number_serial_number_serial_number_serial_number_serial_number";
         DroneRequest request = new DroneRequest(invalidSerialNumber, 500.0, LIGHT);
@@ -136,5 +136,15 @@ class DroneServiceTest {
                 () -> droneService.register(request));
         assertEquals(request, invalidDroneException.getDroneRequest());
         assertTrue(invalidDroneException.getMessage().contains(invalidSerialNumber));
+    }
+
+    @Test
+    public void test_register_withInvalidWeight_throwsInvalidDroneException() {
+        final double invalidWeight = 501.0;
+        DroneRequest request = new DroneRequest("serial_number", invalidWeight, LIGHT);
+        InvalidDroneException invalidDroneException = assertThrows(InvalidDroneException.class,
+                () -> droneService.register(request));
+        assertEquals(request, invalidDroneException.getDroneRequest());
+        assertTrue(invalidDroneException.getMessage().contains(String.valueOf(invalidWeight)));
     }
 }

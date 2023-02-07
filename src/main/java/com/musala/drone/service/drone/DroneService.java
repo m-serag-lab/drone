@@ -20,6 +20,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 @RequiredArgsConstructor
 public class DroneService {
     private static final int MAX_SERIAL_NUMBER = 100;
+    private final static int MAX_WEIGHT = 500;
 
     private final DroneRepository droneRepository;
     private final ModelMapper mapper;
@@ -43,6 +44,11 @@ public class DroneService {
     }
 
     private void validate(DroneRequest request) {
+        if (request.getMaxWeight() != null && request.getMaxWeight() > MAX_WEIGHT) {
+            final String errorMsg = String.format("invalid max_weight '%s', max value is '%s'",
+                    request.getMaxWeight(), MAX_WEIGHT);
+            throw new InvalidDroneException(request, errorMsg);
+        }
         if (isNotBlank(request.getSerialNumber()) && request.getSerialNumber().length() > MAX_SERIAL_NUMBER) {
             final String errorMsg = String.format("invalid serial_number length '%s'", request.getSerialNumber());
             throw new InvalidDroneException(request, errorMsg);

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.musala.drone.model.drone.DroneMedicationsRequest;
+import com.musala.drone.model.drone.DroneMedicationsResponse;
 import com.musala.drone.model.drone.DroneRequest;
 import com.musala.drone.service.drone.DroneService;
 
@@ -46,10 +47,18 @@ public class DroneController {
     }
 
     @PostMapping("/{serial_number}/medications")
+    @Operation(summary = "load_drone_with_medications", description = "loading a drone with medication items", tags = "Drones")
     public ResponseEntity<Object> loadMedications(@RequestBody DroneMedicationsRequest droneMedicationsRequest,
                                                   @PathVariable("serial_number") String serialNumber) {
         droneService.loadMedications(serialNumber, droneMedicationsRequest);
         return ok().build();
+    }
+
+    @GetMapping("/{serial_number}/medications")
+    @Operation(summary = "list_drone_with_medications", description = "checking loaded medication" +
+            " items for a given drone", tags = "Drones")
+    public ResponseEntity<DroneMedicationsResponse> listMedications(@PathVariable("serial_number") String serialNumber) {
+        return ok(droneService.listMedications(serialNumber));
     }
 
 }

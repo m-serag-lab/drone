@@ -3,6 +3,8 @@ package com.musala.drone.controller;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
+import java.util.List;
+
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -123,6 +125,55 @@ public class DroneControllerIT {
             mvc.perform(post(uri).contentType(MediaType.APPLICATION_JSON)
                             .content(request))
                     .andExpect(status().isOk());
+
+            // Then: validate saved drone
+            String findDroneWithMedicationsJPQL = String.format("select e from Drone e" +
+                    " join fetch e.medications m" +
+                    " where e.serialNumber = '%s'", serialNumber);
+            drone = (Drone) entityManager.createQuery(findDroneWithMedicationsJPQL).getResultList().get(0);
+
+            assertEquals(serialNumber, drone.getSerialNumber());
+            assertEquals(LOADED, drone.getState());
+            assertNotNull(drone.getMedications());
+            assertEquals("CODE-1", drone.getMedications().get(0).getCode());
+            assertEquals("CODE-2", drone.getMedications().get(1).getCode());
+
+        } finally {
+            // Cleanup: delete medication and drone
+            safeDelete(drone);
+        }
+    }
+
+    @Test
+    void test_listMedications_thenValidateResponse() throws Exception {
+        Drone drone = null;
+        try {
+            // Given: drone, medication 1, medication 2
+            String serialNumber = "serial_number_value";
+            drone = new Drone();
+            drone.setSerialNumber(serialNumber);
+            drone.setState(LOADED);
+            drone.setBatteryPercentage(80.0);
+            drone.setMaxWeight(35.0);
+
+            Medication medication1 = new Medication();
+            medication1.setCode("CODE-1");
+            medication1.setWeight(10.0);
+            medicationRepository.save(medication1);
+
+            Medication medication2 = new Medication();
+            medication2.setCode("CODE-2");
+            medication2.setWeight(10.0);
+            medicationRepository.save(medication2);
+
+            drone.setMedications(List.of(medication1, medication2));
+            droneRepository.save(drone);
+
+            // When: register new drone
+            String uri = "/drones/" + serialNumber + "/medications";
+            MvcResult result = mvc.perform(get(uri))
+                    .andExpect(status().isOk())
+                    .andReturn();
 
             // Then: validate saved drone
             String findDroneWithMedicationsJPQL = String.format("select e from Drone e" +

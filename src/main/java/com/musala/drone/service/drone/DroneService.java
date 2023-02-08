@@ -16,9 +16,11 @@ import com.musala.drone.exception.LowBatteryException;
 import com.musala.drone.exception.OverloadedWeightException;
 import com.musala.drone.model.drone.Drone;
 import com.musala.drone.model.drone.DroneMedicationsRequest;
+import com.musala.drone.model.drone.DroneMedicationsResponse;
 import com.musala.drone.model.drone.DroneRequest;
 import com.musala.drone.model.drone.DroneResponse;
 import com.musala.drone.model.medication.Medication;
+import com.musala.drone.model.medication.MedicationResponse;
 import com.musala.drone.repository.drone.DroneRepository;
 import com.musala.drone.repository.medication.MedicationRepository;
 
@@ -112,5 +114,20 @@ public class DroneService {
         } else if (drone.getBatteryPercentage() < MIN_BATTERY_PERCENTAGE) {
             throw new LowBatteryException(drone.getSerialNumber(), drone.getBatteryPercentage());
         }
+    }
+
+    @Transactional
+    public DroneMedicationsResponse listMedications(String serialNumber) {
+        Drone drone = droneRepository.findBySerialNumber(serialNumber)
+                .orElseThrow(() -> new InvalidDroneException(serialNumber));
+
+        List<MedicationResponse> medicationResponses = drone.getMedications()
+                .stream()
+                .map(medication -> mapper.map(medication, MedicationResponse.class))
+                .toList();
+        DroneMedicationsResponse response = new DroneMedicationsResponse();
+        response.setDrone(mapper.map(drone, DroneResponse.class));
+        response.setMedications(medicationResponses);
+        return response;
     }
 }

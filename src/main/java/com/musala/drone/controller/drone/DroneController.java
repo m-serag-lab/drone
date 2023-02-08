@@ -37,6 +37,18 @@ public class DroneController {
         return ok(Map.of("items", droneService.list()));
     }
 
+    @GetMapping("/available")
+    @Operation(summary = "list_available", description = "List available drones for loading", tags = "Drones")
+    public ResponseEntity<Object> listAvailable() {
+        return ok(Map.of("items", droneService.listAvailable()));
+    }
+
+    @GetMapping("/{serial_number}")
+    @Operation(summary = "get", description = "check drone battery level for a given drone", tags = "Drones")
+    public ResponseEntity<Object> get(@PathVariable("serial_number") String serialNumber) {
+        return ok(droneService.get(serialNumber));
+    }
+
     @PostMapping
     @Operation(summary = "register", description = "Register new drone, drone registered with" +
             " `100 battery percentage` and in `IDLE state`", tags = "Drones",

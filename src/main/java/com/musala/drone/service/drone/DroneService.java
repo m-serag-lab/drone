@@ -130,4 +130,19 @@ public class DroneService {
         response.setMedications(medicationResponses);
         return response;
     }
+
+    public DroneResponse get(String serialNumber) {
+        Drone drone = droneRepository.findBySerialNumber(serialNumber)
+                .orElseThrow(() -> new InvalidDroneException(serialNumber));
+
+        return mapper.map(drone, DroneResponse.class);
+    }
+
+    public List<DroneResponse> listAvailable() {
+        return droneRepository
+                .findAllByStateAndBatteryPercentage(IDLE, MIN_BATTERY_PERCENTAGE)
+                .stream()
+                .map(drone -> mapper.map(drone, DroneResponse.class))
+                .toList();
+    }
 }

@@ -1,6 +1,7 @@
 package com.musala.drone.repository.medication;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -13,4 +14,7 @@ import com.musala.drone.model.medication.Medication;
 public interface MedicationRepository extends JpaRepository<Medication, Long> {
     @Query("select e from Medication e where e.code in :codes")
     List<Medication> findAllByCodes(@Param("codes") List<String> codes);
+
+    @Query("select e from Medication e where e.code = :code")
+    Optional<Medication> findByCode(String code);
 }

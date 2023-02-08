@@ -9,6 +9,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.musala.drone.exception.DroneConflictException;
 import com.musala.drone.exception.InvalidDroneException;
 import com.musala.drone.exception.InvalidMedicationException;
 import com.musala.drone.exception.LoadedDroneException;
@@ -59,7 +60,6 @@ public class DroneService {
     }
 
     private void validate(DroneRequest request) {
-        //TODO: validate unique serial number
         if (request.getMaxWeight() != null && request.getMaxWeight() > MAX_WEIGHT) {
             final String errorMsg = String.format("invalid max_weight '%s', max value is '%s'",
                     request.getMaxWeight(), MAX_WEIGHT);
@@ -67,6 +67,8 @@ public class DroneService {
         } else if (isNotBlank(request.getSerialNumber()) && request.getSerialNumber().length() > MAX_SERIAL_NUMBER) {
             final String errorMsg = String.format("invalid serial_number length '%s'", request.getSerialNumber());
             throw new InvalidDroneException(request, errorMsg);
+        } else if (droneRepository.findBySerialNumber(request.getSerialNumber()).isPresent()) {
+            throw new DroneConflictException(request.getSerialNumber());
         }
     }
 

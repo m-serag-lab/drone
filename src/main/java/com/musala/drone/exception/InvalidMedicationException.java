@@ -14,4 +14,9 @@ public class InvalidMedicationException extends RuntimeException {
         super(String.format("codes: '%s' are not found", notFoundCodes.stream().collect(joining(", "))));
         this.notFoundCodes = notFoundCodes;
     }
+
+    public InvalidMedicationException(String invalidCode) {
+        super(String.format("codes: '%s' is invalid", invalidCode));
+        this.notFoundCodes = null;
+    }
 }
